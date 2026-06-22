@@ -99,7 +99,8 @@ fn spawn_app() -> TestApp {
                 admin_allowed_subnet: "127.0.0.0/8".to_string(),
             };
             let pool =
-                password_manager_server::db::init_pool(&config.database_url, config.db_pool_size).unwrap();
+                password_manager_server::db::init_pool(&config.database_url, config.db_pool_size)
+                    .unwrap();
             password_manager_server::db::run_migrations(&pool).unwrap();
             let state = Arc::new(password_manager_server::routes::AppState {
                 pool: std::sync::Arc::new(std::sync::RwLock::new(pool)),
