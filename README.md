@@ -4,32 +4,31 @@ A Rust Axum backend for a password manager with ECDH key exchange (X25519), AES-
 
 ## Quick Start (Docker Compose)
 
-### 1. Generate secrets
+### 1. Generate secrets and configure environment
 
-Two 32-byte (256-bit) hex keys are required. Generate them with `openssl`:
-
-```sh
-openssl rand -hex 32   # → DATABASEENCRYPTSECRET
-openssl rand -hex 32   # → SOFTWARESECRET
-```
-
-- **`DATABASEENCRYPTSECRET`** — AES-256-GCM key used to encrypt the server's X25519 private key and every user's ehlo secret before storing them in the SQLite database. Without this key, the database file is useless to an attacker.
-- **`SOFTWARESECRET`** — two purposes: (1) sent as the `admin-key` header to authenticate admin API calls, and (2) served to clients as a proof-of-possession challenge during the `/re-sign` flow (tied to the user's ehlo secret). Treat this like a master password for the whole instance.
-
-### 2. Configure environment
+Two 32-byte (256-bit) hex keys are required. This single command generates both and writes them into `.env`:
 
 ```sh
 cp .env.example .env
+sed -i "s/DATABASEENCRYPTSECRET = .*/DATABASEENCRYPTSECRET = \"$(openssl rand -hex 32)\"/" .env
+sed -i "s/SOFTWARESECRET = .*/SOFTWARESECRET = \"$(openssl rand -hex 32)\"/" .env
 ```
 
-Edit `.env` and paste the two generated keys. The defaults for other variables work out of the box with Docker Compose:
+If you prefer to run them separately:
 
-```ini
-DATABASEENCRYPTSECRET = "<paste 64 hex chars here>"
-SOFTWARESECRET = "<paste 64 hex chars here>"
+```sh
+openssl rand -hex 32   # → paste into DATABASEENCRYPTSECRET
+openssl rand -hex 32   # → paste into SOFTWARESECRET
 ```
 
-### 3. Start the backend
+**What these keys do:**
+
+| Secret | Purpose | If compromised |
+|--------|---------|----------------|
+| `DATABASEENCRYPTSECRET` | AES-256-GCM key that encrypts the server's X25519 private key and every user's ehlo secret **at rest** in SQLite. | Attacker with the DB file still cannot decrypt anything without this key. |
+| `SOFTWARESECRET` | (1) Authenticates admin API calls via the `admin-key` HTTP header. (2) Server-side proof-of-possession secret for the `/re-sign` flow. | Attacker gains full admin access to all users and data. |
+
+### 2. Start the backend
 
 ```sh
 docker compose up -d backend
@@ -37,7 +36,7 @@ docker compose up -d backend
 
 This builds the Docker image (cached across runs) and starts the API server on `0.0.0.0:53971`. The container runs a health check every 2 seconds; `docker compose up -d` returns once the container is healthy.
 
-### 4. Run the smoke test (optional)
+### 3. Run the smoke test (optional)
 
 ```sh
 docker compose run --rm tester
@@ -45,7 +44,7 @@ docker compose run --rm tester
 
 The tester performs a full end-to-end flow — ECDH key exchange, sign-up, admin approval, group/password CRUD, token refresh, session verification, device removal, and re-enrollment. It exits with `"All steps completed successfully!"` on success.
 
-### 5. Use the admin CLI
+### 4. Use the admin CLI
 
 ```sh
 # Interactive TUI (ratatui):
