@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release binary
+        run: cargo build --release
+      - name: Build admin_cli
+        run: cargo build --release --bin admin_cli
+      - name: Build test_sender
+        run: cargo build --release --bin test_sender
+      - name: Create release archive
+        run: |
+          mkdir -p artifacts
+          cp target/release/password-manager-server artifacts/
+          cp target/release/admin_cli artifacts/
+          cp target/release/test_sender artifacts/
+          cd artifacts && tar czf ../password-manager-server-${{ github.ref_name }}.tar.gz .
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: password-manager-server-*.tar.gz
+          generate_release_notes: true
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ghcr.io/karatay-lab/password-manager-server:${{ github.ref_name }},ghcr.io/karatay-lab/password-manager-server:latest
