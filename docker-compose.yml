@@ -1,0 +1,59 @@
+networks:
+  app:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
+
+services:
+  backend:
+    build: .
+    container_name: password-manager-server
+    ports:
+      - "53971:53971"
+    env_file: ".env"
+    volumes:
+      - pwd-data:/data
+    networks:
+      app:
+        ipv4_address: 10.0.0.5
+    environment:
+      ADMIN_ALLOWED_SUBNET: "10.0.0.0/24"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:53971/health"]
+      interval: 2s
+      retries: 15
+      start_period: 5s
+
+  admin:
+    build: .
+    container_name: pwd-admin
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      app:
+        ipv4_address: 10.0.0.10
+    volumes:
+      - ./exports:/exports
+    environment:
+      BACKEND_URL: "http://10.0.0.5:53971"
+      ADMIN_KEY: "${SOFTWARESECRET}"
+      EXPORT_DIR: "/exports"
+    entrypoint: ["sleep", "infinity"]
+
+  tester:
+    build:
+      dockerfile: Dockerfile.tester
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      app:
+        ipv4_address: 10.0.0.15
+    environment:
+      BACKEND_URL: "http://10.0.0.5:53971"
+      ADMIN_KEY: "${SOFTWARESECRET}"
+
+volumes:
+  pwd-data:
