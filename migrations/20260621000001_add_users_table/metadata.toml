@@ -1,0 +1,6 @@
+# This migration recreates the `groups` table to re-point its foreign key from
+# identities to users. With foreign keys enforced, DROP TABLE groups would fail
+# the passwords->groups constraint, and PRAGMA foreign_keys is a no-op inside a
+# transaction. So we run outside Diesel's transaction and toggle enforcement
+# ourselves (the standard SQLite "other schema changes" procedure).
+run_in_transaction = false

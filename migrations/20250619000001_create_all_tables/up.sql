@@ -1,0 +1,33 @@
+CREATE TABLE IF NOT EXISTS identities (
+    uuid TEXT PRIMARY KEY NOT NULL,
+    ip_address VARCHAR(45) NOT NULL,
+    device_token TEXT UNIQUE,
+    ehlo_secret TEXT NOT NULL,
+    server_private_key BLOB NOT NULL,
+    server_public_key BLOB NOT NULL,
+    client_public_key BLOB NOT NULL,
+    extra TEXT NOT NULL DEFAULT '{}',
+    is_confirmed BOOLEAN NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS groups (
+    uuid TEXT PRIMARY KEY NOT NULL,
+    identity_id TEXT NOT NULL REFERENCES identities(uuid),
+    name TEXT NOT NULL,
+    extra TEXT NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS passwords (
+    uuid TEXT PRIMARY KEY NOT NULL,
+    group_id TEXT NOT NULL REFERENCES groups(uuid),
+    pwd TEXT NOT NULL,
+    name TEXT NOT NULL,
+    extra TEXT NOT NULL DEFAULT '{}',
+    valid_since_days INTEGER NOT NULL DEFAULT 30,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

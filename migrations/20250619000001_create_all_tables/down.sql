@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS passwords;
+DROP TABLE IF EXISTS groups;
+DROP TABLE IF EXISTS identities;
