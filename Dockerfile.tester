@@ -1,0 +1,8 @@
+FROM rust:latest AS builder
+WORKDIR /app
+COPY . .
+RUN cargo build --bin test_sender --release
+
+FROM debian:stable-slim
+COPY --from=builder /app/target/x86_64-unknown-linux-gnu/release/test_sender /usr/local/bin/
+CMD ["test_sender"]
